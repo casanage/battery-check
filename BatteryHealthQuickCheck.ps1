@@ -5,6 +5,27 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+
+function Show-Message {
+    param(
+        [string]$Text,
+        [string]$Title = '배터리 퀵체크',
+        [ValidateSet('Information','Error')]
+        [string]$Icon = 'Information'
+    )
+
+    try {
+        Add-Type -AssemblyName PresentationFramework -ErrorAction Stop
+        [System.Windows.MessageBox]::Show($Text, $Title, 'OK', $Icon) | Out-Null
+    }
+    catch {
+        Write-Host "`n[$Title]"
+        Write-Host $Text
+        Write-Host "`n아무 키나 누르면 종료합니다..."
+        [void][System.Console]::ReadKey($true)
+    }
+}
+
 function Get-BatteryData {
     $battery = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
     if (-not $battery) {
@@ -62,8 +83,8 @@ function Get-BatteryData {
 
 function Get-ReplacementMessage {
     param(
-        [double]$HealthPercent,
-        [int]$CycleCount
+        [Nullable[double]]$HealthPercent,
+        [Nullable[int]]$CycleCount
     )
 
     $healthThreshold = 80
@@ -142,15 +163,13 @@ $replaceMessage
 $reportPath
 "@
 
-    Add-Type -AssemblyName PresentationFramework
-    [System.Windows.MessageBox]::Show($message, '배터리 퀵체크', 'OK', 'Information') | Out-Null
+    Show-Message -Text $message -Title '배터리 퀵체크' -Icon Information
 
     if ($OpenReport) {
         Start-Process $reportPath
     }
 }
 catch {
-    Add-Type -AssemblyName PresentationFramework
-    [System.Windows.MessageBox]::Show("실행 중 오류가 발생했습니다.`n$($_.Exception.Message)", '배터리 퀵체크 오류', 'OK', 'Error') | Out-Null
+    Show-Message -Text "실행 중 오류가 발생했습니다.`n$($_.Exception.Message)" -Title '배터리 퀵체크 오류' -Icon Error
     exit 1
 }
